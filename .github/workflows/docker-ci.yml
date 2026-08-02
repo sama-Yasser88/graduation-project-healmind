@@ -8,8 +8,27 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  docker-build:
+
+    name: Build & Push Docker Image
+
     runs-on: ubuntu-latest
+
+    strategy:
+
+      matrix:
+
+        app:
+
+          - name: frontend
+            context: ./Front_End
+            dockerfile: ./Front_End/Dockerfile
+            image: healmind-frontend
+
+          - name: backend
+            context: ./Back_End
+            dockerfile: ./Back_End/Dockerfile
+            image: healmind-backend
 
     steps:
       - name: Checkout Repository
@@ -23,3 +42,14 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.app.context }}
+          file: ${{ matrix.app.dockerfile }}
+
+          push: true
+
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.app.image }}:latest
