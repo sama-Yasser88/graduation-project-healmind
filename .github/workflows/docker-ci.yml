@@ -5,6 +5,8 @@ on:
     branches:
       - devops-latest
 
+  workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
