@@ -7,6 +7,10 @@ on:
 
   workflow_dispatch:
 
+concurrency:
+  group: devops-latest
+  cancel-in-progress: true
+
 permissions:
   contents: read
   security-events: write
