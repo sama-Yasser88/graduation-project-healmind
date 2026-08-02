@@ -13,8 +13,12 @@
     "@fortawesome/fontawesome-free": "^7.3.0",
     "bootstrap": "^5.3.8",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "react-router-dom": "^7.18.0"
+    "react-dom": "19.2.6",
+    "react-router-dom": "6.30.4"
+  },
+  "overrides": {
+    "react-router": "6.30.4"
+    
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
