@@ -7,19 +7,20 @@ on:
 
   workflow_dispatch:
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
   docker-build:
 
-    name: Build & Push Docker Image
+    name: Build, Scan & Push Docker Image
 
     runs-on: ubuntu-latest
 
     strategy:
-
       matrix:
-
         app:
-
           - name: frontend
             context: ./Front_End
             dockerfile: ./Front_End/Dockerfile
@@ -31,25 +32,93 @@ jobs:
             image: healmind-backend
 
     steps:
+
+      # Checkout Repository
       - name: Checkout Repository
         uses: actions/checkout@v7
 
+      # Detect Hardcoded Secrets
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Static Application Security Testing
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: auto
+
+      # Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            Front_End/package-lock.json
+            Back_End/package-lock.json
+
+      # Install Frontend Dependencies
+      - name: Install Frontend Dependencies
+        if: matrix.app.name == 'frontend'
+        working-directory: ./Front_End
+        run: npm ci
+
+      # Frontend Dependency Scan
+      - name: Frontend Dependency Scan
+        if: matrix.app.name == 'frontend'
+        working-directory: ./Front_End
+        run: npm audit --audit-level=high
+
+      # Install Backend Dependencies
+      - name: Install Backend Dependencies
+        if: matrix.app.name == 'backend'
+        working-directory: ./Back_End
+        run: npm ci
+
+      # Backend Dependency Scan
+      - name: Backend Dependency Scan
+        if: matrix.app.name == 'backend'
+        working-directory: ./Back_End
+        run: npm audit --audit-level=high
+
+      # Setup Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      # Login to Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build and Push Docker Image
+      # Build Docker Image
+      - name: Build Docker Image
         uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.app.context }}
           file: ${{ matrix.app.dockerfile }}
+          load: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.app.image }}:latest
 
+      # Scan Docker Image
+      - name: Scan Docker Image with Trivy
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/${{ matrix.app.image }}:latest
+          format: table
+          exit-code: 1
+          severity: HIGH,CRITICAL
+
+      # Push Docker Image
+      - name: Push Docker Image
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.app.context }}
+          file: ${{ matrix.app.dockerfile }}
           push: true
-
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.app.image }}:latest
