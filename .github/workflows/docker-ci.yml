@@ -106,7 +106,7 @@ jobs:
 
       # Scan Docker Image
       - name: Scan Docker Image with Trivy
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/${{ matrix.app.image }}:latest
           format: table
