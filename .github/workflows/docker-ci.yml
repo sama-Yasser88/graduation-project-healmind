@@ -1,9 +1,6 @@
 name: HealMind CI Pipeline
 
 on:
-  push:
-    branches:
-      - devops-latest
 
   workflow_dispatch:
 
