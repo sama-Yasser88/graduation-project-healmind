@@ -6,6 +6,7 @@ resource "kubernetes_deployment" "frontend" {
   }
 
   spec {
+
     replicas = 2
 
     selector {
@@ -15,6 +16,7 @@ resource "kubernetes_deployment" "frontend" {
     }
 
     template {
+
       metadata {
         labels = {
           app = "frontend"
@@ -22,11 +24,12 @@ resource "kubernetes_deployment" "frontend" {
       }
 
       spec {
+
         container {
 
           name  = "frontend"
 
-          image = "hagersherif/healmind-frontend"
+          image = "hagersherif/healmind-frontend:latest"
 
           port {
             container_port = 80

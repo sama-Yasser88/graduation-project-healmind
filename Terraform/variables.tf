@@ -13,3 +13,10 @@ variable "backend_image" {
 variable "namespace" {
   default = "healmind"
 }
+variable "mongo_uri" {
+  type = string
+}
+
+variable "jwt_secret" {
+  type = string
+}
