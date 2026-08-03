@@ -41,9 +41,7 @@ jobs:
       # Checkout Repository
       - name: Checkout Repository
         uses: actions/checkout@v7
-        # edited
-        with:
-          fetch-depth: 0 # Required for Gitleaks to scan the full history
+       
 
       # Detect Hardcoded Secrets
       - name: Run Gitleaks
@@ -91,19 +89,7 @@ jobs:
         working-directory: ./Back_End
         run: npm audit --audit-level=high
 
-      # edited
-      - name: Build Docker Image Locally
-        run: docker build -t my-secure-app:latest.
-
-      - name: Trivy Image Scan
-        uses: aquasecurity/trivy-action@master
-        with:
-        image-ref: "my-secure-app:latest"
-        format: "table"
-        exit-code: "1" # Fails the pipeline if critical issues are found
-        ignore-unfixed: true
-        severity: "CRITICAL,HIGH"
-# -----------------------------------
+     
       # Setup Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -125,14 +111,14 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.app.image }}:latest
 
-      # # Scan Docker Image
-      # - name: Scan Docker Image with Trivy
-      #   uses: aquasecurity/trivy-action@v0.36.0
-      #   with:
-      #     image-ref: ${{ secrets.DOCKER_USERNAME }}/${{ matrix.app.image }}:latest
-      #     format: table
-      #     exit-code: 1
-      #     severity: HIGH,CRITICAL
+      # Scan Docker Image
+      - name: Scan Docker Image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/${{ matrix.app.image }}:latest
+          format: table
+          exit-code: 1
+          severity: HIGH,CRITICAL
 
       # Push Docker Image
       - name: Push Docker Image
