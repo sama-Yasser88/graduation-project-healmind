@@ -95,14 +95,14 @@ jobs:
       - name: Build Docker Image Locally
         run: docker build -t my-secure-app:latest.
 
-        - name: Trivy Image Scan
-          uses: aquasecurity/trivy-action@master
-          with:
-          image-ref: "my-secure-app:latest"
-          format: "table"
-          exit-code: "1" # Fails the pipeline if critical issues are found
-          ignore-unfixed: true
-          severity: "CRITICAL,HIGH"
+      - name: Trivy Image Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+        image-ref: "my-secure-app:latest"
+        format: "table"
+        exit-code: "1" # Fails the pipeline if critical issues are found
+        ignore-unfixed: true
+        severity: "CRITICAL,HIGH"
 # -----------------------------------
       # Setup Docker Buildx
       - name: Set up Docker Buildx
