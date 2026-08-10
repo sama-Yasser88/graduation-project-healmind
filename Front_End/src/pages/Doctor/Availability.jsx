@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TimeSlotCard from "../../components/Doctor/TimeSlotCard/TimeSlotCard";
 import SlotModal from "../../components/Doctor/SlotModal/SlotModal";
+import { getSlots } from "../../services/slotService";
 import styles from "./Availability.module.css";
 
 const initialSlots = {
@@ -41,6 +42,52 @@ const Availability = () => {
   const [modalDateKey, setModalDateKey] = useState(null);
   const [modalSlot, setModalSlot] = useState(null);
 
+  // Load real slots from backend on mount
+  useEffect(() => {
+    const loadDoctorSlots = async () => {
+      try {
+        const response = await getSlots();
+        const backendSlots = response?.data?.slots;
+
+        if (Array.isArray(backendSlots) && backendSlots.length > 0) {
+          const parsed = {};
+          backendSlots.forEach((s) => {
+            if (!s.day) return;
+            const dateKey = new Date(s.day).toISOString().split("T")[0];
+            if (!parsed[dateKey]) parsed[dateKey] = [];
+
+            let start = "09:00";
+            let end = "10:00";
+            if (s.time) {
+              const parts = s.time.includes(" - ")
+                ? s.time.split(" - ")
+                : s.time.split("-");
+              start = parts[0]?.trim() || "09:00";
+              end = parts[1]?.trim() || "10:00";
+            }
+
+            parsed[dateKey].push({
+              id: s._id,
+              _id: s._id,
+              type: "available",
+              start,
+              end,
+            });
+          });
+
+          setSlots((prev) => ({
+            ...prev,
+            ...parsed,
+          }));
+        }
+      } catch (err) {
+        console.warn("Could not fetch slots from backend:", err.message);
+      }
+    };
+
+    loadDoctorSlots();
+  }, []);
+
   const weekDates = getWeekDates(weekStart);
   const monthLabel = weekStart.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
@@ -59,7 +106,9 @@ const Availability = () => {
   const handleDeleteSlot = (dateKey, slotId) => {
     setSlots((prev) => ({
       ...prev,
-      [dateKey]: prev[dateKey].filter((s) => s.id !== slotId),
+      [dateKey]: (prev[dateKey] || []).filter(
+        (s) => s.id !== slotId && s._id !== slotId
+      ),
     }));
   };
 
@@ -79,20 +128,39 @@ const Availability = () => {
 
   const handleCloseModal = () => setModalOpen(false);
 
-  const handleSaveSlot = ({ start, end }) => {
+  const handleSaveSlot = ({ start, end, slotId }) => {
     setSlots((prev) => {
       const daySlots = prev[modalDateKey] || [];
 
       if (modalMode === "edit") {
         return {
           ...prev,
-          [modalDateKey]: daySlots.map((s) =>
-            s.id === modalSlot.id ? { ...s, start, end } : s
-          ),
+          [modalDateKey]: daySlots.map((s) => {
+            const isMatch =
+              s.id === modalSlot?.id ||
+              s._id === modalSlot?._id ||
+              s.id === modalSlot?._id ||
+              s._id === modalSlot?.id;
+            return isMatch
+              ? {
+                  ...s,
+                  id: slotId || s.id || s._id,
+                  _id: slotId || s._id || s.id,
+                  start,
+                  end,
+                }
+              : s;
+          }),
         };
       }
 
-      const newSlot = { id: Date.now(), type: "available", start, end };
+      const newSlot = {
+        id: slotId || Date.now(),
+        _id: slotId || Date.now(),
+        type: "available",
+        start,
+        end,
+      };
       return { ...prev, [modalDateKey]: [...daySlots, newSlot] };
     });
     setModalOpen(false);
@@ -139,11 +207,11 @@ const Availability = () => {
                 ) : (
                   daySlots.map((slot) => (
                     <TimeSlotCard
-                      key={slot.id}
+                      key={slot._id || slot.id}
                       type={slot.type}
                       start={slot.start}
                       end={slot.end}
-                      onDelete={() => handleDeleteSlot(dateKey, slot.id)}
+                      onDelete={() => handleDeleteSlot(dateKey, slot._id || slot.id)}
                       onEdit={() => handleOpenEditModal(dateKey, slot)}
                     />
                   ))
@@ -162,6 +230,7 @@ const Availability = () => {
         show={modalOpen}
         mode={modalMode}
         initialData={modalSlot}
+        dateKey={modalDateKey}
         onClose={handleCloseModal}
         onSave={handleSaveSlot}
       />
