@@ -1,11 +1,10 @@
 
 require("dotenv").config();
 
+const cors = require('cors');
 
 // Packages
-
 const express = require("express");
-
 const morgan = require("morgan");
 
 
@@ -25,6 +24,7 @@ connectedDB();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cors());
 
 // Logger
 if (process.env.NODE_ENV === "development") {
@@ -55,11 +55,11 @@ app.get("/test", (req, res) => {
 // Routes
 
 app.use("/api/auth", require("./routes/auth.routes"));
-
+app.use("/api/session", require("./routes/session.routes"));
 app.use("/api/profile", require("./routes/profile.routes"));
-
+app.use("/api/doctor", require("./routes/doctor.routs"));
 app.use("/api/reviews", require("./routes/review.routes"));
-app.use ("/api/contactus", require("./routes/contactus.routes"));
+app.use("/api/contactus", require("./routes/contactus.routes"));
 
 // app.use("/api/dashboard", require("./routes/dashboard.routes"));
 
