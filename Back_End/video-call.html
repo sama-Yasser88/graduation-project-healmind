@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HealMind — Video Session</title>
+<style>
+  :root {
+    --teal: #0f766e;
+    --teal-dark: #0d5c56;
+    --teal-light: #ccfbf1;
+    --bg: #f7faf9;
+    --panel: #ffffff;
+    --text: #1a2e2b;
+    --muted: #5b6b68;
+    --danger: #b91c1c;
+    --danger-bg: #fef2f2;
+    --border: #e2e8e6;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  /* ---------- شاشة الإعدادات (قبل دخول المكالمة) ---------- */
+  .setup-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 4px 20px rgba(15, 118, 110, 0.06);
+  }
+
+  .setup-card h1 {
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+  }
+
+  .setup-card p.subtitle {
+    color: var(--muted);
+    margin: 0 0 24px;
+    font-size: 0.9rem;
+  }
+
+  label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    margin-top: 16px;
+    color: var(--text);
+  }
+
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: #fbfdfd;
+  }
+
+  input:focus {
+    outline: none;
+    border-color: var(--teal);
+    background: #fff;
+  }
+
+  .hint {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  button.primary {
+    width: 100%;
+    margin-top: 24px;
+    padding: 12px;
+    background: var(--teal);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  button.primary:hover { background: var(--teal-dark); }
+  button.primary:disabled { background: #9cb8b5; cursor: not-allowed; }
+
+  .status-box {
+    margin-top: 18px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    display: none;
+  }
+
+  .status-box.error {
+    display: block;
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid #fecaca;
+  }
+
+  .status-box.loading {
+    display: block;
+    background: var(--teal-light);
+    color: var(--teal-dark);
+  }
+
+  /* ---------- شاشة المكالمة نفسها ---------- */
+  #call-screen {
+    display: none;
+    width: 100%;
+    height: 100vh;
+    position: fixed;
+    inset: 0;
+    background: #0b1f1d;
+  }
+
+  #call-screen.active { display: block; }
+
+  #jitsi-container {
+    width: 100%;
+    height: 100%;
+  }
+
+  .top-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 10px 16px;
+    background: rgba(0,0,0,0.35);
+    color: #fff;
+    font-size: 0.85rem;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .top-bar button {
+    background: var(--danger);
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============================================
+       شاشة الإعدادات: بتدخل فيها التوكن وID السيشن
+       ============================================ -->
+  <div class="setup-card" id="setup-screen">
+    <h1>Join Video Session</h1>
+    <p class="subtitle">Enter your session details to join the call.</p>
+
+    <label for="apiBaseUrl">API Base URL</label>
+    <input type="text" id="apiBaseUrl" value="http://localhost:3000" />
+    <div class="hint">مكان السيرفر بتاعك، غيّرها لو مختلفة</div>
+
+    <label for="token">Access Token</label>
+    <input type="password" id="token" placeholder="الـ accessToken من تسجيل الدخول" />
+    <div class="hint">تلاقيه في رد /api/auth/login</div>
+
+    <label for="sessionId">Session ID</label>
+    <input type="text" id="sessionId" placeholder="6a8965eda6ce8b3fb9a9a1e8" />
+    <div class="hint">الـ _id بتاع السيشن اللي عايز تدخل الفيديو كول بتاعتها</div>
+
+    <button class="primary" id="joinBtn">Join Video Call</button>
+
+    <div class="status-box" id="statusBox"></div>
+  </div>
+
+  <!-- ============================================
+       شاشة المكالمة: هنا Jitsi بيتحمل جوها
+       ============================================ -->
+  <div id="call-screen">
+    <div class="top-bar">
+      <span id="roomLabel"></span>
+      <button id="leaveBtn">Leave Call</button>
+    </div>
+    <div id="jitsi-container"></div>
+  </div>
+
+  <!-- سكريبت Jitsi الرسمي، بيتحمل من meet.jit.si نفسها -->
+  <script src="https://meet.jit.si/external_api.js"></script>
+
+  <script>
+    const setupScreen = document.getElementById('setup-screen');
+    const callScreen = document.getElementById('call-screen');
+    const statusBox = document.getElementById('statusBox');
+    const joinBtn = document.getElementById('joinBtn');
+    const leaveBtn = document.getElementById('leaveBtn');
+    const roomLabel = document.getElementById('roomLabel');
+
+    let jitsiApi = null;
+
+    function showStatus(message, type) {
+      statusBox.textContent = message;
+      statusBox.className = 'status-box ' + type;
+    }
+
+    function clearStatus() {
+      statusBox.className = 'status-box';
+      statusBox.textContent = '';
+    }
+
+    joinBtn.addEventListener('click', async () => {
+      const apiBaseUrl = document.getElementById('apiBaseUrl').value.trim();
+      const token = document.getElementById('token').value.trim();
+      const sessionId = document.getElementById('sessionId').value.trim();
+
+      if (!apiBaseUrl || !token || !sessionId) {
+        showStatus('من فضلك املأ كل الحقول.', 'error');
+        return;
+      }
+
+      joinBtn.disabled = true;
+      showStatus('بنتأكد من صلاحية الدخول للمكالمة...', 'loading');
+
+      try {
+        // =========================================================
+        // 1) نستدعي الـ backend endpoint اللي عملناه عشان ناخد
+        //    اسم الروم ودومين Jitsi واسم العرض بتاع اليوزر
+        // =========================================================
+        const response = await fetch(
+          `${apiBaseUrl}/api/session/${sessionId}/video-call`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          // مثال: "The call is not open yet" أو "not a participant" إلخ
+          showStatus(result.message || 'حصل خطأ غير متوقع.', 'error');
+          joinBtn.disabled = false;
+          return;
+        }
+
+        const { roomName, jitsiDomain, displayName } = result.data;
+
+        // =========================================================
+        // 2) عندنا دلوقتي بيانات الروم، نفتح المكالمة فعليًا
+        // =========================================================
+        startCall(roomName, jitsiDomain, displayName);
+
+      } catch (err) {
+        showStatus('مقدرناش نوصل للسيرفر. تأكد إن الباك اند شغال والـ URL صح.', 'error');
+        joinBtn.disabled = false;
+      }
+    });
+
+    function startCall(roomName, jitsiDomain, displayName) {
+      clearStatus();
+      setupScreen.style.display = 'none';
+      callScreen.classList.add('active');
+      roomLabel.textContent = `Room: ${roomName}`;
+
+      // =========================================================
+      // 3) هنا بيتحصل السحر: JitsiMeetExternalAPI بتاخد اسم الروم
+      //    اللي جاي من السيرفر بتاعنا وتفتح المكالمة جوه الصفحة
+      // =========================================================
+      jitsiApi = new JitsiMeetExternalAPI(jitsiDomain, {
+        roomName: roomName,
+        parentNode: document.getElementById('jitsi-container'),
+        width: '100%',
+        height: '100%',
+        userInfo: {
+          displayName: displayName,
+        },
+        configOverwrite: {
+          startWithAudioMuted: false,
+          startWithVideoMuted: false,
+          prejoinPageEnabled: true, // بتوري شاشة "جاهز تدخل؟" قبل الدخول الفعلي
+        },
+        interfaceConfigOverwrite: {
+          SHOW_JITSI_WATERMARK: false,
+        },
+      });
+
+      // لو المستخدم قفل المكالمة من جوه واجهة Jitsi نفسها
+      jitsiApi.addEventListener('videoConferenceLeft', () => {
+        leaveCall();
+      });
+    }
+
+    leaveBtn.addEventListener('click', leaveCall);
+
+    function leaveCall() {
+      if (jitsiApi) {
+        jitsiApi.dispose();
+        jitsiApi = null;
+      }
+      callScreen.classList.remove('active');
+      setupScreen.style.display = 'block';
+      joinBtn.disabled = false;
+    }
+  </script>
+
+</body>
+</html>
