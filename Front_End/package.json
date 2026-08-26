@@ -16,9 +16,12 @@
     "@fortawesome/react-fontawesome": "^0.2.2",
     "axios": "^1.18.1",
     "bootstrap": "^5.3.8",
+    "cookie": "^0.7.2",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
+    "react-hook-form": "^7.86.0",
     "react-router-dom": "^7.18.0",
+    "set-cookie-parser": "^3.1.2",
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
